@@ -1,21 +1,20 @@
-create or replace table load_sup_dashboard (
+drop table load_sup_dashboard
+;
+
+create table load_sup_dashboard (
   load date,
   booking_credit_current number,
   booking_credit_next number,
   booking_credit_future number,
-  booking_credit_next_fy number,
-
+  booking_credit_next_fy number
   )
-
+;
 
 create or replace procedure sub_dashboard
 is
 cursor load_dates_cur is
    SELECT distinct(load)
      FROM load_fywip;
-
-  /*l_load load_dates_cur%rowtype; */
-  l_load date ;
 
   bc_current number ;
   bc_next number ;
@@ -27,67 +26,34 @@ cursor load_dates_cur is
   BEGIN
 
   /* booking credits - Next */
-  open load_dates_cur;
-  loop
-    fetch load_dates_cur into l_load ;
-    exit when load_dates_cur%NOTFOUND;
-
+  /* open load_dates_cur; */
+  for ld_rec in load_dates_cur loop
+  
     Select sum(booking_credit) into bc_next
     from load_fywip
     where FCST_SEGMENT='Bookings' and
-    LOAD = l_load and
+    LOAD = ld_rec.load and
     QUARTER in ('Next');
+ 
+    Select sum(booking_credit) into bc_current
+    from load_fywip
+    where FCST_SEGMENT='Bookings' and
+    LOAD = ld_rec.load and
+    QUARTER in ('Current');
 
-  end loop;
-  close load_dates_cur ;
+    Select sum(booking_credit) into bc_future
+    from load_fywip
+    where FCST_SEGMENT='Bookings' and
+    LOAD = ld_rec.load and
+    QUARTER in ('Future');
 
+    Select sum(booking_credit) into bc_nextFY
+    from load_fywip
+    where FCST_SEGMENT='Bookings' and
+    LOAD = ld_rec.load and
+    QUARTER in ('Future FY');
 
-    /* booking credits - Current */
-    open load_dates_cur;
-    loop
-      fetch load_dates_cur into l_load ;
-      exit when load_dates_cur%NOTFOUND;
-
-      Select sum(booking_credit) into bc_current
-      from load_fywip
-      where FCST_SEGMENT='Bookings' and
-      LOAD = l_load and
-      QUARTER in ('Current');
-
-    end loop;
-    close load_dates_cur ;
-
-    /* booking credits - Future */
-    open load_dates_cur;
-    loop
-      fetch load_dates_cur into l_load ;
-      exit when load_dates_cur%NOTFOUND;
-
-      Select sum(booking_credit) into bc_future
-      from load_fywip
-      where FCST_SEGMENT='Bookings' and
-      LOAD = l_load and
-      QUARTER in ('Future');
-
-    end loop;
-    close load_dates_cur ;
-
-    /* booking credits - Future FY */
-    open load_dates_cur;
-    loop
-      fetch load_dates_cur into l_load ;
-      exit when load_dates_cur%NOTFOUND;
-
-      Select sum(booking_credit) into bc_current
-      from load_fywip
-      where FCST_SEGMENT='Bookings' and
-      LOAD = l_load and
-      QUARTER in ('Future FY');
-
-    end loop;
-    close load_dates_cur ;
-
-    //now insert it into the table
+    /* now insert it into the table  */
     insert into load_sup_dashboard (
       load,
       booking_credit_current,
@@ -95,14 +61,16 @@ cursor load_dates_cur is
       booking_credit_future,
       booking_credit_next_fy)
       values (
-      l_load,
+      ld_rec.load,
       bc_current,
       bc_next,
       bc_future,
       bc_nextfy)
       ;
+      
+    end loop;
 
 END;
 /
 
-execute quality ;
+execute sub_dashboard ;
