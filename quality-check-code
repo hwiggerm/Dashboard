@@ -1,0 +1,162 @@
+set pagesize 99
+
+/* number of contract in the whole year */
+prompt ********************************************************************
+prompt Number of contracts to go FY17
+prompt ********************************************************************
+
+Select quarter, SRR,nvl(CSM,SRR) "CSM/SRR", Support_lob "SW/SYS" ,count(distinct(contract)) "# of Contract", to_char(sum(booking_credit),'$99,999,999') "Contract Value" 
+from fywip
+where FCST_SEGMENT='Bookings' and
+QUARTER in ('Prior','Current','Next','Future')
+group by quarter, SRR,nvl(CSM,SRR), Support_lob 
+order by 1,2 ;
+
+Select Support_lob, to_char(sum(booking_credit),'$999,999,999') "Contract Value" , count(distinct(contract)) "Number  of contracts" 
+from fywip 
+where FCST_SEGMENT='Bookings' and
+QUARTER in ('Prior','Current','Next','Future')
+group by Support_lob ;
+
+/* number of contract in current Q */
+prompt ********************************************************************
+prompt Number of contracts to go current Q
+prompt ********************************************************************
+
+Select SRR,nvl(CSM,SRR) "CSM/SRR", Support_lob "SW/SYS" ,count(distinct(contract)) "# of Contract", to_char(sum(booking_credit),'$99,999,999') "Contract Value" 
+from fywip 
+where FCST_SEGMENT='Bookings' and
+QUARTER in ('Prior','Current')
+group by SRR,nvl(CSM,SRR), Support_lob 
+order by 1,2 ;
+
+Select support_lob, to_char(sum(booking_credit),'$999,999,999') "Contract Value" , count(distinct(contract)) "Number  of contracts" 
+from fywip 
+where FCST_SEGMENT='Bookings' and
+QUARTER in ('Prior','Current')
+group by support_lob ;
+
+/* fcst dat <= today */
+prompt ********************************************************************
+prompt Forecast in the past
+prompt ********************************************************************
+
+Select fcst_date, contract,srr,customer_name 
+from fywip where fcst_date <= sysdate and
+FCST_SEGMENT='Bookings' and
+STATUS_CODE <> 'Budgetary/Secondary Quote' and
+QUARTER in ('Prior','Current','Next','Future');
+
+/* enddate in one month away and comments older then 7 days */
+prompt ********************************************************************
+prompt Contracts this month with comments older then one week
+prompt ********************************************************************
+
+Select fcst_date,last_update_date,substr(RENEWAL_COMMENT,1,10) "Comments",contract,srr,customer_name , to_char(sysdate - to_date(last_update_date),'99.99')
+from fywip where to_date(start_date) <= sysdate + 60 and
+FCST_SEGMENT='Bookings' and
+STATUS_CODE <> 'Budgetary/Secondary Quote' and
+QUARTER in ('Prior','Current','Next','Future') and
+sysdate - to_date(last_update_date) > 7;
+
+/* contracts for the next 30 days where update-data in in conflict with the date mentioned in ths start of the comment */
+prompt ********************************************************************
+prompt Contracts this month with comments not matching update-date of comments 
+prompt ********************************************************************
+
+Select fcst_date,last_update_date,substr(RENEWAL_COMMENT,1,10) "Comments",contract,srr,customer_name , to_char(sysdate - to_date(last_update_date),'99.99')
+from fywip where to_date(start_date) <= sysdate + 30 and
+FCST_SEGMENT='Bookings' and
+STATUS_CODE <> 'Budgetary/Secondary Quote' and
+QUARTER in ('Prior','Current','Next','Future') and
+substr(RENEWAL_COMMENT,1,2) <> substr(last_update_date,1,2);
+
+
+/* current workload
+/* Contracts Moving to PD*/
+prompt ********************************************************************
+prompt Contracts moving to PD
+prompt ********************************************************************
+
+select customer_name "Customer", contract "Contract" , to_char(booking_credit,'$999,999,999'), to_char(sysdate-to_date(start_date),'9999.9')||'       ' "Days_to_Start"
+from fywip
+where sysdate-to_date(start_date) > 0 and 
+status_code <> 'Budgetary/Secondary Quote' and 
+QUARTER in ('Prior','Current') 
+order by 3 ;
+
+/* Age of comments */
+prompt ********************************************************************
+prompt Average Age of comments per SRR per quarter
+prompt ********************************************************************
+Select quarter, srr, to_char(avg(sysdate - to_date(last_update_date)),'999.99')||'        ' "Comment_Age"
+from fywip where 
+FCST_SEGMENT='Bookings' and
+STATUS_CODE <> 'Budgetary/Secondary Quote' and
+QUARTER in ('Prior','Current','Next','Future')
+group by quarter, srr 
+order  by 2,1;
+
+
+/* Forecast Day on  end-fy = default, public-h'day  */
+prompt ************************************************************************
+prompt Contracts with dates in suspiciouse moments (weekends/endQ/publ.holiday)
+prompt Kerst : 25-Dec-2016 27-dec-2016
+prompt Oud/Nieuw 31-Dec-2016 1-Jan-2017
+prompt Goede Vrijdag 14-Apr-201
+prompt 2e Paasdag 17-Apr-2017
+prompt Koningsdag 27-Apr-2017
+prompt Hemelvaart 25-May-2017
+prompt *************************************************************************
+select to_date(fcst_date) "Contract-date", contract, srr, customer_name 
+from  fywip where 
+FCST_SEGMENT = 'Bookings' and
+STATUS_CODE <> 'Budgetary/Secondary Quote' and
+QUARTER in ('Prior','Current','Next','Future') and (
+to_char(to_date(fcst_date),'day') in ('saturday','sunday') or
+fcst_date in ('30-Nov-2016', '28-Feb-2017','31-May-2017') or
+fcst_date in ('25-Dec-2016','27-dec-2016','31-Dec-2016','1-Jan-2017','14-Apr-2017','17-Apr-2017','27-Apr-2017','25-May-2017'))
+order by 1;
+
+
+/* Bookings in quarter */
+prompt ********************************************************************
+prompt Ontime Booked
+prompt ********************************************************************
+select support_lob,quarter, to_char(sum(tier1_booking_credit),'$99,999,999.99')  "Q" 
+from bookings
+group by support_lob,quarter;
+
+
+
+
+
+
+
+
+/* Ontime Bookings */
+prompt ********************************************************************
+prompt Ontime Booked
+prompt ********************************************************************
+select count(distinct(contract))  "Total Booked" from bookings  ;
+select count(distinct(contract))  "Ontime Booked" from bookings where to_date(date_approved) <= to_date(start_date) ;
+select count(distinct(contract))  "Ontime Booked" from bookings where to_date(date_approved) > to_date(start_date) ;
+
+
+/* Online Bookings */
+prompt ********************************************************************
+prompt Online Bookings vs non-online
+prompt ********************************************************************
+select count(distinct(contract))  "Booked Contracts Total" from bookings where nvl(accepted_online,'-') in  ('Y','N') ;
+select count(distinct(contract)) "Online Booked Contracts"  from bookings where nvl(accepted_online,'-') = 'Y' ;
+select count(distinct(contract)) "Offline Booked Contracts" from bookings where nvl(accepted_online,'-') = 'N' ;
+
+
+/* Online Publish */
+prompt ********************************************************************
+prompt Online Publishing
+prompt ********************************************************************
+select count(distinct(contract)) "Online Volume" from FYWIP where fcst_segment='Bookings' and nvl(PUBL_TYPE,'-') in ('Published or Will be Published','Set to Online Issues')  and status_code <> 'Budgetary/Secondary Quote'  ;
+select count(distinct(contract)) "Online Published" from FYWIP where fcst_segment='Bookings' and nvl(PUBL_TYPE,'-') = 'Published or Will be Published' and status_code <> 'Budgetary/Secondary Quote'  ;
+select count(distinct(contract)) "Online Issues" from FYWIP where fcst_segment='Bookings' and nvl(PUBL_TYPE,'-') =  'Set to Online Issues'          and status_code <> 'Budgetary/Secondary Quote'  ;
+select count(distinct(contract)) "Online Non-Elig" from FYWIP where fcst_segment='Bookings' and nvl(PUBL_TYPE,'-') =  'Not Set to Online - NOT Elig'          and status_code <> 'Budgetary/Secondary Quote'  ;
