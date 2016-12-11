@@ -3,10 +3,15 @@ drop table load_sup_dashboard
 
 create table load_sup_dashboard (
   load date,
-  booking_credit_current number,
-  booking_credit_next number,
-  booking_credit_future number,
-  booking_credit_next_fy number
+  booking_credit_current_v number,
+  booking_credit_next_v number,
+  booking_credit_future_v number,
+  booking_credit_next_fy_v number
+  booking_credit_current_a number,
+  booking_credit_next_a number,
+  booking_credit_future_a number,
+  booking_credit_next_fy_a number
+
   )
 ;
 
@@ -16,25 +21,30 @@ cursor load_dates_cur is
    SELECT distinct(load)
      FROM load_fywip;
 
-  bc_current number ;
-  bc_next number ;
-  bc_future number ;
-  bc_nextfy number ;
+     bc_current_v number ;
+     bc_next_v number ;
+     bc_future_v number ;
+     bc_nextfy_v number ;
+
+     bc_current_a number ;
+     bc_next_a number ;
+     bc_future_a number ;
+     bc_nextfy_a number ;
 
 
   /* program starts */
   BEGIN
 
   /* booking credits - Next */
-  /* open load_dates_cur; */
+
   for ld_rec in load_dates_cur loop
-  
-    Select sum(booking_credit) into bc_next
+
+    Select sum(booking_credit), count(distinct(contract)) into bc_next_v,bc_next_a
     from load_fywip
     where FCST_SEGMENT='Bookings' and
     LOAD = ld_rec.load and
     QUARTER in ('Next');
- 
+
     Select sum(booking_credit) into bc_current
     from load_fywip
     where FCST_SEGMENT='Bookings' and
@@ -53,6 +63,12 @@ cursor load_dates_cur is
     LOAD = ld_rec.load and
     QUARTER in ('Future FY');
 
+
+
+
+
+
+
     /* now insert it into the table  */
     insert into load_sup_dashboard (
       load,
@@ -67,7 +83,7 @@ cursor load_dates_cur is
       bc_future,
       bc_nextfy)
       ;
-      
+
     end loop;
 
 END;
