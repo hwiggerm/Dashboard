@@ -1,17 +1,16 @@
-drop table load_sup_dashboard
+drop TABLE  load_sup_dashboard
 ;
 
 create table load_sup_dashboard (
   load date,
   booking_credit_current_v number,
-  booking_credit_next_v number,
-  booking_credit_future_v number,
-  booking_credit_next_fy_v number
   booking_credit_current_a number,
-  booking_credit_next_a number,
-  booking_credit_future_a number,
+  booking_credit_next_v    number,
+  booking_credit_next_a    number,
+  booking_credit_future_v  number,
+  booking_credit_future_a  number,
+  booking_credit_next_fy_v number,
   booking_credit_next_fy_a number
-
   )
 ;
 
@@ -39,54 +38,89 @@ cursor load_dates_cur is
 
   for ld_rec in load_dates_cur loop
 
-    Select sum(booking_credit), count(distinct(contract)) into bc_next_v,bc_next_a
+    Select sum(booking_credit) into bc_next_v
     from load_fywip
     where FCST_SEGMENT='Bookings' and
     LOAD = ld_rec.load and
     QUARTER in ('Next');
 
-    Select sum(booking_credit) into bc_current
+    Select count(distinct(contract)) into bc_next_a
+    from load_fywip
+    where FCST_SEGMENT='Bookings' and
+    LOAD = ld_rec.load and
+    QUARTER in ('Next');
+    
+    
+    DBMS_OUTPUT.put_line('Hallo');
+    DBMS_OUTPUT.put_line(bc_next_a);
+
+    Select sum(booking_credit) into bc_current_v
     from load_fywip
     where FCST_SEGMENT='Bookings' and
     LOAD = ld_rec.load and
     QUARTER in ('Current');
 
-    Select sum(booking_credit) into bc_future
+    Select count(distinct(contract)) into bc_current_a
+    from load_fywip
+    where FCST_SEGMENT='Bookings' and
+    LOAD = ld_rec.load and
+    QUARTER in ('Current');
+
+   
+   
+    Select sum(booking_credit) into bc_future_v
     from load_fywip
     where FCST_SEGMENT='Bookings' and
     LOAD = ld_rec.load and
     QUARTER in ('Future');
 
-    Select sum(booking_credit) into bc_nextFY
+    Select count(distinct(contract)) into bc_future_a
+    from load_fywip
+    where FCST_SEGMENT='Bookings' and
+    LOAD = ld_rec.load and
+    QUARTER in ('Future');
+
+
+
+
+    Select sum(booking_credit) into bc_nextFY_v
     from load_fywip
     where FCST_SEGMENT='Bookings' and
     LOAD = ld_rec.load and
     QUARTER in ('Future FY');
 
-
-
-
-
-
+    Select count(distinct(contract)) into bc_nextFY_a
+    from load_fywip
+    where FCST_SEGMENT='Bookings' and
+    LOAD = ld_rec.load and
+    QUARTER in ('Future FY');
 
     /* now insert it into the table  */
     insert into load_sup_dashboard (
       load,
-      booking_credit_current,
-      booking_credit_next,
-      booking_credit_future,
-      booking_credit_next_fy)
+      booking_credit_current_v,
+      booking_credit_current_a,
+      booking_credit_next_v,
+      booking_credit_next_a,
+      booking_credit_future_v,
+      booking_credit_future_a,
+      booking_credit_next_fy_v,
+      booking_credit_next_fy_a)
       values (
       ld_rec.load,
-      bc_current,
-      bc_next,
-      bc_future,
-      bc_nextfy)
+      bc_current_v,
+      bc_current_a,
+      bc_next_v,
+      bc_next_a,
+      bc_future_v,
+      bc_future_a,
+      bc_nextfy_v,
+      bc_nextfy_a
+      )
       ;
 
     end loop;
 
 END;
 /
-
-execute sub_dashboard ;
+execute sub_dashboard;
